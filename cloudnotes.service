@@ -1,0 +1,16 @@
+[Unit]
+Description=CloudNotes Flask application
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=hpstudent
+WorkingDirectory=/mnt/e/Kalvium/semester-7/cloudnotes-v1
+EnvironmentFile=/mnt/e/Kalvium/semester-7/cloudnotes-v1/.env
+ExecStart=/mnt/e/Kalvium/semester-7/cloudnotes-v1/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
