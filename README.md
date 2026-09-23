@@ -52,10 +52,10 @@ See `DOCKER-3.11.md` for the full workflow and screenshot checklist.
 
 CloudNotes now includes local Kubernetes manifests in `k8s/`:
 
-- `k8s/deployment.yaml` — 3-replica RollingUpdate Deployment using `localhost:5000/cloudnotes:1.0.0`
+- `k8s/deployment.yaml` — 3-replica RollingUpdate Deployment using `localhost:5000/cloudnotes:1.0.1`
 - `k8s/service.yaml` — ClusterIP Service on port 80 targeting the application on port 5000
 
-The Deployment and Service both use the `app: cloudnotes` label/selector so the Service routes to the Pods correctly.
+The Deployment and Service both use the `app: cloudnotes` label/selector so the Service routes to the Pods correctly. The Flask app binds to `0.0.0.0:5000`, and Kubernetes health probes use `/health`.
 
 For the local-cluster workflow, see `KUBERNETES-4.2.md`. The required validation is:
 

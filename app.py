@@ -14,10 +14,15 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 app.register_blueprint(api_bp, url_prefix="/api")
 
-@app.before_first_request
 def startup():
     init_db(DATABASE_PATH)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+startup()
+
+@app.route("/health")
+def health():
+    return {"status": "ok"}, 200
 
 @app.route("/")
 def home():
@@ -32,4 +37,4 @@ def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=int(os.getenv("PORT", "5000")))

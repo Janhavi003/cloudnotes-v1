@@ -1,0 +1,30 @@
+# Git and local metadata
+.git
+.gitignore
+.github
+
+# Python caches / local environments
+__pycache__
+*.py[cod]
+*.pyo
+.venv
+venv
+env
+.pytest_cache
+.mypy_cache
+
+# Local/editor files
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Terraform state and provider caches
+infra/.terraform
+infra/*.tfstate
+infra/*.tfstate.*
+infra/.terraform.lock.hcl
+
+# Documentation / assignment artifacts
+*.pdf
+assignment.md

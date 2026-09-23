@@ -7,10 +7,10 @@ This folder contains the Kubernetes Deployment and Service for the CloudNotes ap
 The manifests use the image produced by the Module 3.11 workflow:
 
 ```text
-localhost:5000/cloudnotes:1.0.0
+localhost:5000/cloudnotes:1.0.1
 ```
 
-The app listens on container port `5000`. The Kubernetes Service exposes it internally on port `80`.
+The app listens on container port `5000` and explicitly binds Flask to `0.0.0.0`, not `127.0.0.1`. This is required so Kubernetes probes and Service traffic can reach the application through the Pod network. The Kubernetes Service exposes it internally on port `80`.
 
 ## Local workflow
 
@@ -43,7 +43,7 @@ make registry
 Then make `localhost:5000` reachable from your chosen local cluster. For example, with Minikube, an alternative is to load the already-built image directly:
 
 ```bash
-minikube image load localhost:5000/cloudnotes:1.0.0
+minikube image load localhost:5000/cloudnotes:1.0.1
 ```
 
 If the image is loaded directly into Minikube, you can change the Deployment image to the locally loaded tag and keep:
@@ -86,6 +86,8 @@ curl -i http://localhost:8080/
 
 Expected result: HTTP `200`.
 
+The Deployment probes use `/health`, which is served by the application and returns HTTP 200 when the process is reachable.
+
 You can also open:
 
 ```text
@@ -122,3 +124,13 @@ The assignment asks for:
    - `kubectl get svc cloudnotes`
    - CloudNotes responding in the browser
    - the GKE mapping note
+
+## Important application binding fix
+
+The containerized Flask application must bind to `0.0.0.0`. Binding only to `127.0.0.1` would make the process reachable only from inside the container and would cause Kubernetes readiness/liveness probes and Service traffic to fail. The current `app.py` uses `host="0.0.0.0"` and port `5000`.
+
+The Kubernetes Deployment uses image tag `1.0.1` so the corrected application is not confused with an older locally cached `1.0.0` image. Rebuild and push `1.0.1` before deploying.
+
+## Data consistency note
+
+CloudNotes currently uses a local SQLite database and local uploads directory. With multiple replicas, each Pod has its own filesystem, so this is not shared application storage. For a production multi-replica deployment, move persistent application data to a shared/managed datastore and object storage (or use an appropriate Kubernetes persistent-volume design). This assignment keeps the local Kubernetes deployment simple and does not require a cloud database.
