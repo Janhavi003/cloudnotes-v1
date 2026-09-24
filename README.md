@@ -48,25 +48,30 @@ curl -i http://localhost:8080/
 See `DOCKER-3.11.md` for the full workflow and screenshot checklist.
 
 
+
 ## 4.2 Kubernetes Pods, Deployments and Manifests
 
-CloudNotes now includes local Kubernetes manifests in `k8s/`:
+CloudNotes includes the required Kubernetes manifests in `k8s/`. The local-cluster version uses the image `cloudnotes:1.0.1`, which can be built directly inside Minikube without Docker Desktop.
 
-- `k8s/deployment.yaml` — 3-replica RollingUpdate Deployment using `localhost:5000/cloudnotes:1.0.1`
-- `k8s/service.yaml` — ClusterIP Service on port 80 targeting the application on port 5000
+- `k8s/deployment.yaml` — 3-replica RollingUpdate Deployment
+- `k8s/service.yaml` — ClusterIP Service exposing port 80 and targeting container port 5000
+- Pod label and Service selector: `app: cloudnotes`
+- Flask binding: `0.0.0.0:5000`
+- Health endpoint: `/health`
 
-The Deployment and Service both use the `app: cloudnotes` label/selector so the Service routes to the Pods correctly. The Flask app binds to `0.0.0.0:5000`, and Kubernetes health probes use `/health`.
+For Minikube:
 
-For the local-cluster workflow, see `KUBERNETES-4.2.md`. The required validation is:
-
-```bash
-kubectl get nodes
+```powershell
+minikube start --driver=hyperv
+minikube image build -t cloudnotes:1.0.1 .
 kubectl apply -f k8s/
+kubectl rollout status deployment/cloudnotes
 kubectl get pods
 kubectl get svc cloudnotes
 kubectl get endpoints cloudnotes
 kubectl port-forward svc/cloudnotes 8080:80
-curl -i http://localhost:8080/
 ```
 
-The assignment requires a real local Kubernetes cluster and an HTTP 200 response from CloudNotes; these runtime results must be captured on the student's machine.
+Then verify `http://localhost:8080/` returns HTTP 200. For GKE, use the same manifests with the image changed to a registry image accessible by GKE, such as Google Artifact Registry.
+
+The local Kubernetes commands must be run on the student's machine and the observed results should be used in the video submission.

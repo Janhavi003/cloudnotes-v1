@@ -1,136 +1,88 @@
 # CloudNotes Kubernetes 4.2
 
-This folder contains the Kubernetes Deployment and Service for the CloudNotes app.
+This project contains the Kubernetes Deployment and Service required for assignment 4.2. The manifests are designed to work with a local Minikube cluster without requiring Docker Desktop.
 
-## Image
+## Application configuration
 
-The manifests use the image produced by the Module 3.11 workflow:
+CloudNotes listens on container port `5000` and Flask explicitly binds to `0.0.0.0`, not `127.0.0.1`. The application exposes `/health`, which returns HTTP 200 and is used by the Kubernetes readiness and liveness probes.
 
-```text
-localhost:5000/cloudnotes:1.0.1
+## Minikube workflow (no Docker Desktop required)
+
+1. Start Minikube with an available driver, for example Hyper-V on Windows:
+
+```powershell
+minikube start --driver=hyperv
 ```
 
-The app listens on container port `5000` and explicitly binds Flask to `0.0.0.0`, not `127.0.0.1`. This is required so Kubernetes probes and Service traffic can reach the application through the Pod network. The Kubernetes Service exposes it internally on port `80`.
+2. Verify the node is Ready:
 
-## Local workflow
-
-### 1. Start a local cluster
-
-Use one of the assignment-approved options:
-
-```bash
-minikube start
-# or
-kind create cluster
-# or start Docker Desktop Kubernetes
-# or start k3s
-```
-
-Confirm the node is ready:
-
-```bash
+```powershell
 kubectl get nodes
 ```
 
-### 2. Make the image available to the cluster
+3. Build the image directly inside Minikube:
 
-For a local registry workflow, first make sure the registry from Module 3.11 is running:
-
-```bash
-make registry
+```powershell
+minikube image build -t cloudnotes:1.0.1 .
 ```
 
-Then make `localhost:5000` reachable from your chosen local cluster. For example, with Minikube, an alternative is to load the already-built image directly:
+4. Confirm the image is present:
 
-```bash
-minikube image load localhost:5000/cloudnotes:1.0.1
+```powershell
+minikube image ls | Select-String cloudnotes
 ```
 
-If the image is loaded directly into Minikube, you can change the Deployment image to the locally loaded tag and keep:
+5. Apply the manifests:
 
-```yaml
-imagePullPolicy: IfNotPresent
-```
-
-For Docker Desktop Kubernetes, a host-local registry may be reachable as configured by your Docker installation.
-
-### 3. Apply the manifests
-
-```bash
+```powershell
 kubectl apply -f k8s/
-kubectl get pods -w
-kubectl get svc cloudnotes
-```
-
-Wait until all three pods show `1/1 Running`.
-
-### 4. Verify Service wiring
-
-```bash
-kubectl get endpoints cloudnotes
-```
-
-The endpoints should not be empty.
-
-### 5. Port-forward and test
-
-```bash
-kubectl port-forward svc/cloudnotes 8080:80
-```
-
-In another terminal:
-
-```bash
-curl -i http://localhost:8080/
-```
-
-Expected result: HTTP `200`.
-
-The Deployment probes use `/health`, which is served by the application and returns HTTP 200 when the process is reachable.
-
-You can also open:
-
-```text
-http://localhost:8080
-```
-
-in a browser.
-
-### 6. Useful debugging commands
-
-```bash
-kubectl get deployments,pods,svc
-kubectl describe deployment cloudnotes
-kubectl describe pod <pod-name>
-kubectl logs <pod-name>
 kubectl rollout status deployment/cloudnotes
 ```
 
+6. Verify the Pods and Service:
+
+```powershell
+kubectl get pods
+kubectl get svc cloudnotes
+kubectl get endpoints cloudnotes
+```
+
+All three Pods should become `1/1 Running`. The endpoints output should contain Pod IP addresses and port 5000, not `<none>`.
+
+7. Expose the Service locally:
+
+```powershell
+kubectl port-forward svc/cloudnotes 8080:80
+```
+
+In another terminal or in a browser, verify:
+
+```text
+http://localhost:8080/
+```
+
+```powershell
+curl -i http://localhost:8080/
+curl -i http://localhost:8080/health
+```
+
+The expected HTTP status is `200 OK`.
+
+## Manifest design
+
+The Deployment has three replicas and uses a RollingUpdate strategy. Pods and the Service use the same label/selector: `app: cloudnotes`. The Service listens on port 80 and targets the named container port 5000. Resource requests/limits and HTTP health probes are configured.
+
 ## GKE mapping
 
-The same Deployment and Service manifests can be used on a production GKE cluster; the cluster changes from the local Kubernetes cluster to managed GKE, and production access would typically use a cloud `LoadBalancer` or `Ingress` instead of local `kubectl port-forward`.
-
-## Submission checklist
-
-The assignment asks for:
-
-1. GitHub PR containing `k8s/deployment.yaml` and `k8s/service.yaml`.
-2. Service selector matching the pod label `app: cloudnotes`.
-3. One-line GKE mapping note in the PR description.
-4. A 3–6 minute video showing:
-   - `kubectl get nodes`
-   - manifest application
-   - pods at `1/1 Running`
-   - `kubectl get svc cloudnotes`
-   - CloudNotes responding in the browser
-   - the GKE mapping note
-
-## Important application binding fix
-
-The containerized Flask application must bind to `0.0.0.0`. Binding only to `127.0.0.1` would make the process reachable only from inside the container and would cause Kubernetes readiness/liveness probes and Service traffic to fail. The current `app.py` uses `host="0.0.0.0"` and port `5000`.
-
-The Kubernetes Deployment uses image tag `1.0.1` so the corrected application is not confused with an older locally cached `1.0.0` image. Rebuild and push `1.0.1` before deploying.
+The same Deployment and Service manifests can be applied to GKE after changing the image to a registry image accessible by GKE, such as an image stored in Google Artifact Registry; production exposure would normally use a cloud LoadBalancer or Ingress instead of local port-forwarding.
 
 ## Data consistency note
 
-CloudNotes currently uses a local SQLite database and local uploads directory. With multiple replicas, each Pod has its own filesystem, so this is not shared application storage. For a production multi-replica deployment, move persistent application data to a shared/managed datastore and object storage (or use an appropriate Kubernetes persistent-volume design). This assignment keeps the local Kubernetes deployment simple and does not require a cloud database.
+CloudNotes currently uses SQLite and a local uploads directory. With three replicas, those files are Pod-local. Shared persistent storage or a managed database/object-storage design would be appropriate for production, but shared storage is not required by this 4.2 assignment.
+
+## Submission checklist
+
+- `k8s/deployment.yaml` and `k8s/service.yaml` committed to the PR.
+- Service selector matches Pod label `app: cloudnotes`.
+- Video is 3–6 minutes and shows cluster readiness, manifest application, Pods, Service, browser response, and the GKE mapping.
+- Drive video link is accessible to the evaluator.

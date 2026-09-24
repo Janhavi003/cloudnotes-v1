@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: cloudnotes
-          image: localhost:5000/cloudnotes:1.0.1
+          image: cloudnotes:1.0.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

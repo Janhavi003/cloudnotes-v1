@@ -1,33 +1,33 @@
-# 4.2 Feedback Fix
+# Kubernetes 4.2 Feedback Fix
 
-The Kubernetes grader identified an application binding issue. The corrected project explicitly binds Flask to `0.0.0.0` on port `5000` so traffic from the Pod network, Kubernetes Service, and health probes can reach the application.
+The previous grader feedback identified an application binding problem. This corrected project addresses it in `app.py`: Flask listens on `0.0.0.0:5000` so Kubernetes probes and Service traffic can reach the application through the Pod network.
 
-The deployment now uses the new image tag `localhost:5000/cloudnotes:1.0.1` rather than the older `1.0.0` tag. This avoids accidentally running a stale locally cached image.
+A `/health` endpoint returns HTTP 200, and both readiness and liveness probes use that endpoint. The Deployment uses the corrected `cloudnotes:1.0.1` image and is configured for a three-replica RollingUpdate.
 
-The application also exposes `/health`, and the Deployment readiness and liveness probes check that endpoint.
+For a local Minikube cluster without Docker Desktop, build the image directly inside Minikube:
 
-## Rebuild the corrected image
-
-```bash
-docker build -t localhost:5000/cloudnotes:1.0.1 .
-docker push localhost:5000/cloudnotes:1.0.1
+```powershell
+minikube image build -t cloudnotes:1.0.1 .
 ```
 
-If using Minikube and the local registry is not reachable from the cluster, load the corrected image into Minikube and use an image reference appropriate to that cluster. The important requirement is that the Deployment runs the corrected image.
+Then apply:
 
-## Verify
-
-```bash
+```powershell
 kubectl apply -f k8s/
 kubectl rollout status deployment/cloudnotes
 kubectl get pods
 kubectl get endpoints cloudnotes
+```
+
+Finally:
+
+```powershell
 kubectl port-forward svc/cloudnotes 8080:80
 curl -i http://localhost:8080/
 ```
 
-The application should be ready and return HTTP 200. Do not claim these runtime results until they have actually been observed on the local cluster.
+Do not claim runtime results in the submission until they have actually been observed on the local cluster.
 
 ## Data consistency
 
-The current CloudNotes SQLite database and uploads directory are Pod-local. Multiple replicas therefore do not provide shared persistence. For a production design, use a managed/shared database and object storage or a suitable shared persistent-volume architecture.
+The current SQLite database and uploads directory are Pod-local. A production multi-replica deployment should use a shared/managed database and object storage or another appropriate persistent storage architecture. This is a documented production improvement and is not required for the 4.2 local-cluster task.
