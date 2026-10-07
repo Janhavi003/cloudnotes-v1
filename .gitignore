@@ -1,8 +1,24 @@
-venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.DS_Store
-*.swp
+# Environment and secrets
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# macOS
+.DS_Store
+
+# Editor / temporary files
+*.swp
+*.swo
+
+# IDEs
+.vscode/
+.idea/
