@@ -1,6 +1,6 @@
-import os
 import psycopg
 from psycopg.rows import dict_row
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS notes (
@@ -12,15 +12,33 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 """
 
-ALLOWED_EXTENSIONS = {"txt", "md", "pdf", "png", "jpg", "jpeg", "gif"}
+
+ALLOWED_EXTENSIONS = {
+    "txt",
+    "md",
+    "pdf",
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+}
 
 
 def get_db_connection(database_url):
-    return psycopg.connect(database_url, row_factory=dict_row)
+    """Create a PostgreSQL database connection."""
+    if not database_url:
+        raise ValueError("DATABASE_URL is required.")
+
+    return psycopg.connect(
+        database_url,
+        row_factory=dict_row,
+    )
 
 
 def init_db(database_url):
+    """Initialize the PostgreSQL database schema."""
     conn = get_db_connection(database_url)
+
     try:
         conn.execute(SCHEMA)
         conn.commit()
@@ -29,4 +47,8 @@ def init_db(database_url):
 
 
 def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    """Return True when the uploaded file has an allowed extension."""
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
